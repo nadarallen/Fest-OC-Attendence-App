@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/student.dart';
 import '../models/attendance.dart';
+import '../models/scan_type.dart';
 import '../services/database_helper.dart';
 
 class AttendanceProvider with ChangeNotifier {
@@ -19,7 +20,7 @@ class AttendanceProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String> markAttendance(String rollNumber) async {
+  Future<String> markAttendance(String rollNumber, ScanType type) async {
     final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
     
     // Check if student exists
@@ -29,18 +30,33 @@ class AttendanceProvider with ChangeNotifier {
     }
 
     try {
-      final attendance = Attendance(
-        rollNumber: rollNumber,
-        date: date,
-        status: 'P',
-        timestamp: DateTime.now().toIso8601String(),
-      );
-      await DatabaseHelper.instance.markAttendance(attendance);
-      notifyListeners();
-      return 'success';
+      if (type == ScanType.checkIn) {
+        final attendance = Attendance(
+          rollNumber: rollNumber,
+          date: date,
+          status: 'P',
+          inTime: DateFormat('HH:mm').format(DateTime.now()),
+        );
+        await DatabaseHelper.instance.markCheckIn(attendance);
+        notifyListeners();
+        return 'check-in-success';
+      } else {
+        await DatabaseHelper.instance.markCheckOut(
+          rollNumber, 
+          date, 
+          DateFormat('HH:mm').format(DateTime.now())
+        );
+        notifyListeners();
+        return 'check-out-success';
+      }
     } catch (e) {
-      if (e.toString().contains('already marked')) {
-        return 'duplicate';
+      final msg = e.toString();
+      if (msg.contains('Already Checked In')) {
+        return 'already-checked-in';
+      } else if (msg.contains('Student has not Checked In yet')) {
+        return 'not-checked-in';
+      } else if (msg.contains('Already Checked Out')) {
+        return 'already-checked-out';
       }
       return 'error';
     }
@@ -49,7 +65,7 @@ class AttendanceProvider with ChangeNotifier {
   Future<void> registerStudent(Student student) async {
     await DatabaseHelper.instance.createStudent(student);
     await loadStudents();
-    await markAttendance(student.rollNumber); 
+    await markAttendance(student.rollNumber, ScanType.checkIn); 
   }
 
   Future<Map<String, double>> getAttendancePercentage(String rollNumber) async {

@@ -21,8 +21,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -42,10 +43,35 @@ class DatabaseHelper {
         roll_number TEXT NOT NULL,
         date TEXT NOT NULL,
         status TEXT NOT NULL,
-        timestamp TEXT NOT NULL,
+        in_time TEXT NOT NULL,
+        out_time TEXT,
         FOREIGN KEY (roll_number) REFERENCES students (roll_number)
       )
     ''');
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add out_time column
+      await db.execute('ALTER TABLE attendance ADD COLUMN out_time TEXT');
+      // Rename timestamp to in_time (SQLite doesn't support generic RENAME COLUMN in older versions easily, 
+      // but commonly we can just interpret the old 'timestamp' as 'in_time' in code or add new column and copy.
+      // For simplicity/compatibility, we will try to rename if possible or just create new col)
+      
+      // Since SQLite limited support for RENAME COLUMN depending on version:
+      // Simplest migration: we will treat 'timestamp' as valid legacy and just add 'in_time' column, 
+      // and update 'Attendance.fromMap' to handle it.
+      // BUT, let's try to be clean.
+      // We will just ADD in_time and COPY timestamp to it, then we can ignore timestamp.
+      
+      try {
+        await db.execute('ALTER TABLE attendance RENAME COLUMN timestamp TO in_time');
+      } catch (e) {
+        // Fallback if renaming not supported directly
+        await db.execute('ALTER TABLE attendance ADD COLUMN in_time TEXT');
+        await db.execute('UPDATE attendance SET in_time = timestamp');
+      }
+    }
   }
 
   // Student Operations
@@ -76,7 +102,10 @@ class DatabaseHelper {
     return result.map((json) => Student.fromMap(json)).toList();
   }
 
-  Future<int> markAttendance(Attendance attendance) async {
+  // Attendance Operations
+
+  // Strict Check-In
+  Future<int> markCheckIn(Attendance attendance) async {
     final db = await instance.database;
     final existing = await db.query(
       'attendance',
@@ -85,10 +114,36 @@ class DatabaseHelper {
     );
 
     if (existing.isNotEmpty) {
-      throw Exception('Attendance already marked for this student today.');
+      throw Exception('Already Checked In');
     }
 
     return await db.insert('attendance', attendance.toMap());
+  }
+
+  // Strict Check-Out
+  Future<int> markCheckOut(String rollNumber, String date, String outTime) async {
+    final db = await instance.database;
+    final existing = await db.query(
+      'attendance',
+      where: 'roll_number = ? AND date = ?',
+      whereArgs: [rollNumber, date],
+    );
+
+    if (existing.isEmpty) {
+      throw Exception('Student has not Checked In yet');
+    }
+
+    final record = existing.first;
+    if (record['out_time'] != null && (record['out_time'] as String).isNotEmpty) {
+       throw Exception('Already Checked Out');
+    }
+
+    return await db.update(
+      'attendance',
+      {'out_time': outTime},
+      where: 'id = ?',
+      whereArgs: [record['id']],
+    );
   }
   
   Future<List<Attendance>> getAllAttendance() async {

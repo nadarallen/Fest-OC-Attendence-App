@@ -1,0 +1,4 @@
+enum ScanType {
+  checkIn,
+  checkOut,
+}

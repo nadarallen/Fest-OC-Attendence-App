@@ -3,6 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../providers/attendance_provider.dart';
 import '../models/student.dart';
+import '../models/scan_type.dart';
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
@@ -14,6 +15,7 @@ class ScannerScreen extends StatefulWidget {
 class _ScannerScreenState extends State<ScannerScreen> {
   final MobileScannerController controller = MobileScannerController();
   bool _isProcessing = false;
+  ScanType _scanType = ScanType.checkIn;
 
   @override
   void dispose() {
@@ -32,19 +34,31 @@ class _ScannerScreenState extends State<ScannerScreen> {
         
         // Mark Attendance
         final provider = Provider.of<AttendanceProvider>(context, listen: false);
-        final result = await provider.markAttendance(code);
+        final result = await provider.markAttendance(code, _scanType);
         
-        if (result == 'success') {
-          _showMessage('Attendance Marked for $code', Colors.green);
-        } else if (result == 'duplicate') {
-          _showMessage('Already Marked Today!', Colors.orange);
+        if (result == 'check-in-success') {
+          _showMessage('Check-In Successful: $code', Colors.green);
+        } else if (result == 'check-out-success') {
+          _showMessage('Check-Out Successful: $code', Colors.blue);
+        } else if (result == 'already-checked-in') {
+          _showMessage('Always Checked In Today!', Colors.orange);
+        } else if (result == 'already-checked-out') {
+          _showMessage('Already Checked Out Today!', Colors.red);
+        } else if (result == 'not-checked-in') {
+          _showMessage('Student has NOT checked in yet!', Colors.redAccent);
         } else if (result == 'not_found') {
-          // Pause Scanner and Show Register Dialog
-          await controller.stop();
-          if (mounted) {
-            await _showRegisterDialog(code);
-            await controller.start();
+          if (_scanType == ScanType.checkIn) {
+            // Pause Scanner and Show Register Dialog
+            await controller.stop();
+            if (mounted) {
+              await _showRegisterDialog(code);
+              await controller.start();
+            }
+          } else {
+             _showMessage('Student Not Found!', Colors.red);
           }
+        } else {
+          _showMessage('Error Marking Attendance', Colors.red);
         }
 
         await Future.delayed(const Duration(seconds: 2));
@@ -97,9 +111,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
                
                await Provider.of<AttendanceProvider>(context, listen: false).registerStudent(newStudent);
                if (mounted) Navigator.pop(context);
-               _showMessage('Student Registered & Marked Present', Colors.green);
+               _showMessage('Student Registered & Checked In', Colors.green);
             },
-            child: const Text('Register & Mark'),
+            child: const Text('Register & Check-In'),
           )
         ],
       ),
@@ -110,9 +124,51 @@ class _ScannerScreenState extends State<ScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Scan Barcode')),
-      body: MobileScanner(
-        controller: controller,
-        onDetect: _handleBarcode,
+      body: Column(
+        children: [
+          // Toggle UI
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SegmentedButton<ScanType>(
+              segments: const [
+                ButtonSegment(
+                  value: ScanType.checkIn,
+                  label: Text('Check In'),
+                  icon: Icon(Icons.login),
+                ),
+                ButtonSegment(
+                  value: ScanType.checkOut,
+                  label: Text('Check Out'),
+                  icon: Icon(Icons.logout),
+                ),
+              ],
+              selected: {_scanType},
+              onSelectionChanged: (Set<ScanType> newSelection) {
+                setState(() {
+                  _scanType = newSelection.first;
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: MobileScanner(
+              controller: controller,
+              onDetect: _handleBarcode,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: _scanType == ScanType.checkIn ? Colors.green.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
+            child: Text(
+              _scanType == ScanType.checkIn ? 'Scanning for CHECK IN' : 'Scanning for CHECK OUT',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _scanType == ScanType.checkIn ? Colors.green : Colors.blue,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

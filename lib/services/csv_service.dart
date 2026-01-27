@@ -49,11 +49,18 @@ class CsvService {
       for (var date in dates) {
         final att = attendanceList.firstWhere(
           (a) => a.rollNumber == student.rollNumber && a.date == date,
-          orElse: () => Attendance(rollNumber: '', date: '', status: 'N/A', timestamp: ''),
+          orElse: () => Attendance(rollNumber: '', date: '', status: 'N/A', inTime: ''),
         );
         
         if (att.status == 'P') {
-          row.add('P');
+          // Format: In: HH:mm \n Out: HH:mm
+          String cellInfo = 'In: ${att.inTime}';
+          if (att.outTime != null && att.outTime!.isNotEmpty) {
+            cellInfo += '\nOut: ${att.outTime}';
+          } else {
+             cellInfo += '\nOut: -';
+          }
+          row.add(cellInfo);
           presentCount++;
         } else {
           row.add('A'); 

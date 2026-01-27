@@ -3,14 +3,16 @@ class Attendance {
   final String rollNumber;
   final String date; // YYYY-MM-DD
   final String status; // 'P' or 'A'
-  final String timestamp;
+  final String inTime;
+  final String? outTime;
 
   Attendance({
     this.id,
     required this.rollNumber,
     required this.date,
     required this.status,
-    required this.timestamp,
+    required this.inTime,
+    this.outTime,
   });
 
   Map<String, dynamic> toMap() {
@@ -19,7 +21,8 @@ class Attendance {
       'roll_number': rollNumber,
       'date': date,
       'status': status,
-      'timestamp': timestamp,
+      'in_time': inTime,
+      'out_time': outTime,
     };
   }
 
@@ -29,7 +32,8 @@ class Attendance {
       rollNumber: map['roll_number'],
       date: map['date'],
       status: map['status'],
-      timestamp: map['timestamp'],
+      inTime: map['in_time'] ?? map['timestamp'] ?? '', // Handle migration fallback
+      outTime: map['out_time'],
     );
   }
 }
