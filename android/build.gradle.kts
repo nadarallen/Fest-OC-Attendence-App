@@ -1,8 +1,10 @@
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
+plugins {
+    id("com.android.application") apply false
+    // id("com.android.library") apply false // Removed to avoid conflict if not found in settings, or assume managed.
+    // Actually, usually we keep it for modules. Let's try applying false without version.
+    id("com.android.library") apply false
+    id("org.jetbrains.kotlin.android") apply false
+    id("com.google.gms.google-services") version "4.4.2" apply false
 }
 
 val newBuildDir: Directory =

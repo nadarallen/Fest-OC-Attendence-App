@@ -2,7 +2,8 @@ import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../services/database_helper.dart';
+import 'package:share_plus/share_plus.dart';
+import '../services/firestore_service.dart';
 import '../models/attendance.dart';
 
 class CsvService {
@@ -30,8 +31,8 @@ class CsvService {
        }
     }
 
-    final students = await DatabaseHelper.instance.getAllStudents();
-    final attendanceList = await DatabaseHelper.instance.getAllAttendance();
+    final students = await FirestoreService.instance.getAllStudents();
+    final attendanceList = await FirestoreService.instance.getAllAttendance();
 
     final Set<String> datesSet = attendanceList.map((a) => a.date).toSet();
     final List<String> dates = datesSet.toList()..sort();
@@ -92,6 +93,10 @@ class CsvService {
     final file = File('$path/$fileName');
     
     await file.writeAsString(csv);
+    
+    // Share result
+    await Share.shareXFiles([XFile(file.path)], text: 'Attendance Report');
+    
     return file.path;
   }
 }

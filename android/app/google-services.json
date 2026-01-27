@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "190655523723",
+    "project_id": "unpaid-labours",
+    "storage_bucket": "unpaid-labours.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:190655523723:android:99cb1db524568011065d8e",
+        "android_client_info": {
+          "package_name": "com.example.attendance_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD73FgksN-iNnfn8FKgJn1EuuJEYxaccsI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/student.dart';
 import '../models/attendance.dart';
 import '../models/scan_type.dart';
-import '../services/database_helper.dart';
+import '../services/firestore_service.dart';
 
 class AttendanceProvider with ChangeNotifier {
   List<Student> _students = [];
@@ -15,7 +15,11 @@ class AttendanceProvider with ChangeNotifier {
   Future<void> loadStudents() async {
     _isLoading = true;
     notifyListeners();
-    _students = await DatabaseHelper.instance.getAllStudents();
+    try {
+      _students = await FirestoreService.instance.getAllStudents();
+    } catch (e) {
+      debugPrint("Error loading students: $e");
+    }
     _isLoading = false;
     notifyListeners();
   }
@@ -24,7 +28,7 @@ class AttendanceProvider with ChangeNotifier {
     final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
     
     // Check if student exists
-    final student = await DatabaseHelper.instance.getStudent(rollNumber);
+    final student = await FirestoreService.instance.getStudent(rollNumber);
     if (student == null) {
       return 'not_found';
     }
@@ -37,11 +41,11 @@ class AttendanceProvider with ChangeNotifier {
           status: 'P',
           inTime: DateFormat('HH:mm').format(DateTime.now()),
         );
-        await DatabaseHelper.instance.markCheckIn(attendance);
+        await FirestoreService.instance.markCheckIn(attendance);
         notifyListeners();
         return 'check-in-success';
       } else {
-        await DatabaseHelper.instance.markCheckOut(
+        await FirestoreService.instance.markCheckOut(
           rollNumber, 
           date, 
           DateFormat('HH:mm').format(DateTime.now())
@@ -63,13 +67,13 @@ class AttendanceProvider with ChangeNotifier {
   }
 
   Future<void> registerStudent(Student student) async {
-    await DatabaseHelper.instance.createStudent(student);
+    await FirestoreService.instance.createStudent(student);
     await loadStudents();
     await markAttendance(student.rollNumber, ScanType.checkIn); 
   }
 
   Future<Map<String, double>> getAttendancePercentage(String rollNumber) async {
-    final stats = await DatabaseHelper.instance.getStudentStats(rollNumber);
+    final stats = await FirestoreService.instance.getStudentStats(rollNumber);
     final total = stats['total'];
     final present = stats['present'];
     
