@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../providers/attendance_provider.dart';
+import '../providers/auth_provider.dart';
 import '../models/student.dart';
 import '../models/scan_type.dart';
 
@@ -32,16 +33,19 @@ class _ScannerScreenState extends State<ScannerScreen> {
         setState(() { _isProcessing = true; });
         final String code = barcode.rawValue!;
         
-        // Mark Attendance
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        final String activeUser = auth.currentDisplayName ?? auth.currentUsername ?? 'System';
+
+        // Mark Attendance with active user info
         final provider = Provider.of<AttendanceProvider>(context, listen: false);
-        final result = await provider.markAttendance(code, _scanType);
+        final result = await provider.markAttendance(code, _scanType, markedBy: activeUser);
         
         if (result == 'check-in-success') {
-          _showMessage('Check-In Successful: $code', Colors.green);
+          _showMessage('Check-In Successful: $code (by $activeUser)', Colors.green);
         } else if (result == 'check-out-success') {
-          _showMessage('Check-Out Successful: $code', Colors.blue);
+          _showMessage('Check-Out Successful: $code (by $activeUser)', Colors.blue);
         } else if (result == 'already-checked-in') {
-          _showMessage('Always Checked In Today!', Colors.orange);
+          _showMessage('Already Checked In Today!', Colors.orange);
         } else if (result == 'already-checked-out') {
           _showMessage('Already Checked Out Today!', Colors.red);
         } else if (result == 'not-checked-in') {
@@ -85,13 +89,15 @@ class _ScannerScreenState extends State<ScannerScreen> {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Text('New Student: $rollNumber'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Name')),
-            TextField(controller: domainController, decoration: const InputDecoration(labelText: 'OC Domain')),
-            TextField(controller: semController, decoration: const InputDecoration(labelText: 'Semester')),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Name')),
+              TextField(controller: domainController, decoration: const InputDecoration(labelText: 'OC Domain')),
+              TextField(controller: semController, decoration: const InputDecoration(labelText: 'Semester')),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -102,6 +108,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
             onPressed: () async {
                if (nameController.text.isEmpty) return;
                
+               final auth = Provider.of<AuthProvider>(context, listen: false);
+               final String activeUser = auth.currentDisplayName ?? auth.currentUsername ?? 'System';
+
                final newStudent = Student(
                  rollNumber: rollNumber,
                  name: nameController.text,
@@ -109,9 +118,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
                  semester: semController.text,
                );
                
-               await Provider.of<AttendanceProvider>(context, listen: false).registerStudent(newStudent);
+               await Provider.of<AttendanceProvider>(context, listen: false).registerStudent(newStudent, markedBy: activeUser);
                if (mounted) Navigator.pop(context);
-               _showMessage('Student Registered & Checked In', Colors.green);
+               _showMessage('Student Registered & Checked In by $activeUser', Colors.green);
             },
             child: const Text('Register & Check-In'),
           )

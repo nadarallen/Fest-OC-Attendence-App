@@ -21,7 +21,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -45,31 +45,50 @@ class DatabaseHelper {
         status TEXT NOT NULL,
         in_time TEXT NOT NULL,
         out_time TEXT,
+        marked_by TEXT,
         FOREIGN KEY (roll_number) REFERENCES students (roll_number)
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE users (
+        username TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        totp_secret TEXT NOT NULL
+      )
+    ''');
+
+    await _seedUsers(db);
+  }
+
+  Future _seedUsers(Database db) async {
+    final users = [
+      {'username': 'Allen Admin', 'display_name': 'Allen Admin', 'totp_secret': 'JBSWY3DPEHPK3PXP'},
+      {'username': 'user1', 'display_name': 'user1', 'totp_secret': 'KVKFKRCPNZQUYMLS'},
+      {'username': 'user2', 'display_name': 'user2', 'totp_secret': 'MZXW6YTBOIJW4ZZP'},
+      {'username': 'user3', 'display_name': 'user3', 'totp_secret': 'NXW2CZLSMFUG64TW'},
+    ];
+    for (var u in users) {
+      await db.insert('users', u, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       // Add out_time column
       await db.execute('ALTER TABLE attendance ADD COLUMN out_time TEXT');
-      // Rename timestamp to in_time (SQLite doesn't support generic RENAME COLUMN in older versions easily, 
-      // but commonly we can just interpret the old 'timestamp' as 'in_time' in code or add new column and copy.
-      // For simplicity/compatibility, we will try to rename if possible or just create new col)
-      
-      // Since SQLite limited support for RENAME COLUMN depending on version:
-      // Simplest migration: we will treat 'timestamp' as valid legacy and just add 'in_time' column, 
-      // and update 'Attendance.fromMap' to handle it.
-      // BUT, let's try to be clean.
-      // We will just ADD in_time and COPY timestamp to it, then we can ignore timestamp.
-      
       try {
         await db.execute('ALTER TABLE attendance RENAME COLUMN timestamp TO in_time');
       } catch (e) {
-        // Fallback if renaming not supported directly
         await db.execute('ALTER TABLE attendance ADD COLUMN in_time TEXT');
         await db.execute('UPDATE attendance SET in_time = timestamp');
+      }
+    }
+    if (oldVersion < 3) {
+      try {
+        await db.execute('ALTER TABLE attendance ADD COLUMN marked_by TEXT');
+      } catch (e) {
+        // Ignore if already exists
       }
     }
   }

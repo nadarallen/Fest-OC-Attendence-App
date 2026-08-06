@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/attendance_provider.dart';
+import '../providers/auth_provider.dart';
 import '../services/csv_service.dart';
 import 'scanner_screen.dart';
 import 'student_list_screen.dart';
@@ -197,77 +198,189 @@ class _DashboardScreenState extends State<DashboardScreen> {
      return Scaffold(
        body: CustomScrollView(
          slivers: [
-           // Premium Gradient Header
-           SliverAppBar(
-             expandedHeight: 180.0,
-             floating: false,
-             pinned: true,
-             flexibleSpace: FlexibleSpaceBar(
-               title: const Text(
-                 'Unpaid Labours',
-                 style: TextStyle(
-                   color: Colors.white,
-                   fontWeight: FontWeight.bold,
-                   shadows: [
-                     Shadow(
-                       offset: Offset(0, 1),
-                       blurRadius: 3.0,
-                       color: Colors.black26,
-                     ),
-                   ],
-                 ),
-               ),
-               background: Container(
-                 decoration: BoxDecoration(
-                   gradient: LinearGradient(
-                     begin: Alignment.topLeft,
-                     end: Alignment.bottomRight,
-                     colors: [
-                       theme.colorScheme.primary,
-                       theme.colorScheme.primary.withRed(100),
-                     ],
-                   ),
-                 ),
-                 child: Stack(
-                   children: [
-                     Positioned(
-                       right: -30,
-                       top: -30,
-                       child: CircleAvatar(
-                         radius: 80,
-                         backgroundColor: Colors.white.withOpacity(0.08),
-                       ),
-                     ),
-                     Positioned(
-                       left: -20,
-                       bottom: -20,
-                       child: CircleAvatar(
-                         radius: 60,
-                         backgroundColor: Colors.white.withOpacity(0.05),
-                       ),
-                     ),
-                   ],
-                 ),
-               ),
-             ),
-           ),
+            // Premium Gradient Header
+            SliverAppBar(
+              expandedHeight: 180.0,
+              floating: false,
+              pinned: true,
+              actions: [
+                Consumer<AuthProvider>(
+                  builder: (context, auth, child) {
+                    return IconButton(
+                      icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                      tooltip: 'Logout (${auth.currentUsername ?? ""})',
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Log Out'),
+                            content: const Text('Are you sure you want to log out of your session?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Logout', style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          auth.logout();
+                        }
+                      },
+                    );
+                  },
+                ),
+              ],
+              flexibleSpace: FlexibleSpaceBar(
+                title: const Text(
+                  'Unpaid Labours',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 1),
+                        blurRadius: 3.0,
+                        color: Colors.black26,
+                      ),
+                    ],
+                  ),
+                ),
+                background: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        theme.colorScheme.primary,
+                        theme.colorScheme.primary.withRed(100),
+                      ],
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        right: -30,
+                        top: -30,
+                        child: CircleAvatar(
+                          radius: 80,
+                          backgroundColor: Colors.white.withOpacity(0.08),
+                        ),
+                      ),
+                      Positioned(
+                        left: -20,
+                        bottom: -20,
+                        child: CircleAvatar(
+                          radius: 60,
+                          backgroundColor: Colors.white.withOpacity(0.05),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
-           // Stats & Navigation Grid
-           SliverToBoxAdapter(
-             child: Padding(
-               padding: const EdgeInsets.all(16.0),
-               child: Column(
-                 crossAxisAlignment: CrossAxisAlignment.start,
-                 children: [
-                   // Welcome Text
-                   Text(
-                     'Overview',
-                     style: theme.textTheme.titleLarge?.copyWith(
-                       fontWeight: FontWeight.bold,
-                       color: const Color(0xFF1E293B),
-                     ),
-                   ),
-                   const SizedBox(height: 12),
+            // Stats & Navigation Grid
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Active User & Session Countdown Card
+                    Consumer<AuthProvider>(
+                      builder: (context, auth, child) {
+                        final session = auth.session;
+                        if (session == null) return const SizedBox.shrink();
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.indigo.shade600,
+                                Colors.blue.shade700,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.blue.withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const CircleAvatar(
+                                radius: 20,
+                                backgroundColor: Colors.white24,
+                                child: Icon(Icons.verified_user_rounded, color: Colors.white, size: 22),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Authenticated User: ${auth.currentDisplayName ?? auth.currentUsername}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Session expires in: ${session.formattedRemainingTime}',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.85),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white24,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.timer_outlined, color: Colors.white, size: 14),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      '2h max',
+                                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+
+                    // Welcome Text
+                    Text(
+                      'Overview',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
 
                    // Stat Card
                    Consumer<AttendanceProvider>(
@@ -326,56 +439,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
                    ),
                    const SizedBox(height: 12),
 
-                   // Menu buttons
-                   GridView.count(
-                     crossAxisCount: 2,
-                     shrinkWrap: true,
-                     physics: const NeverScrollableScrollPhysics(),
-                     crossAxisSpacing: 16,
-                     mainAxisSpacing: 16,
-                     childAspectRatio: 1.1,
-                     children: [
-                       _DashboardActionCard(
-                         icon: Icons.qr_code_scanner_rounded,
-                         label: 'Scan Attendance',
-                         description: 'Check-In/Out students',
-                         color: theme.colorScheme.primary,
-                         onTap: () {
-                           Navigator.of(context).push(
-                             MaterialPageRoute(builder: (context) => const ScannerScreen()),
-                           );
-                         },
-                       ),
-                       _DashboardActionCard(
-                         icon: Icons.assignment_rounded,
-                         label: 'View Register',
-                         description: 'Profiles & Stats',
-                         color: const Color(0xFF10B981),
-                         onTap: () {
-                           Navigator.of(context).push(
-                             MaterialPageRoute(builder: (context) => const StudentListScreen()),
-                           );
-                         },
-                       ),
-                       _DashboardActionCard(
-                         icon: _isExporting
-                             ? Icons.hourglass_top_rounded
-                             : Icons.cloud_download_rounded,
-                         label: _isExporting ? 'Exporting...' : 'Export CSV',
-                         description: 'Share attendance report',
-                         color: Colors.amber[800]!,
-                         onTap: _isExporting ? () {} : _exportCsv,
-                       ),
-                     ],
-                   ),
-                 ],
-               ),
-             ),
-           ),
-         ],
-       ),
-     );
-   }
+                    // Menu buttons
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.25,
+                      children: [
+                        _DashboardActionCard(
+                          icon: Icons.qr_code_scanner_rounded,
+                          label: 'Scan Attendance',
+                          description: 'Check-In/Out students',
+                          color: theme.colorScheme.primary,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const ScannerScreen()),
+                            );
+                          },
+                        ),
+                        _DashboardActionCard(
+                          icon: Icons.assignment_rounded,
+                          label: 'View Register',
+                          description: 'Profiles & Stats',
+                          color: const Color(0xFF10B981),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const StudentListScreen()),
+                            );
+                          },
+                        ),
+                        _DashboardActionCard(
+                          icon: _isExporting
+                              ? Icons.hourglass_top_rounded
+                              : Icons.cloud_download_rounded,
+                          label: _isExporting ? 'Exporting...' : 'Export CSV',
+                          description: 'Share attendance report',
+                          color: Colors.amber[800]!,
+                          onTap: _isExporting ? () {} : _exportCsv,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 }
 
 class _DashboardActionCard extends StatelessWidget {
@@ -404,30 +517,34 @@ class _DashboardActionCard extends StatelessWidget {
          onTap: onTap,
          borderRadius: BorderRadius.circular(20),
          child: Padding(
-           padding: const EdgeInsets.all(16.0),
+           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
            child: Column(
              crossAxisAlignment: CrossAxisAlignment.start,
              mainAxisAlignment: MainAxisAlignment.center,
              children: [
-               Icon(icon, size: 36, color: color),
-               const SizedBox(height: 12),
+               Icon(icon, size: 30, color: color),
+               const SizedBox(height: 8),
                Text(
                  label,
                  style: theme.textTheme.titleMedium?.copyWith(
                    fontWeight: FontWeight.bold,
+                   fontSize: 14,
                    color: const Color(0xFF1E293B),
                  ),
                  maxLines: 1,
                  overflow: TextOverflow.ellipsis,
                ),
-               const SizedBox(height: 4),
-               Text(
-                 description,
-                 style: theme.textTheme.bodySmall?.copyWith(
-                   color: Colors.grey[500],
+               const SizedBox(height: 2),
+               Expanded(
+                 child: Text(
+                   description,
+                   style: theme.textTheme.bodySmall?.copyWith(
+                     color: Colors.grey[600],
+                     fontSize: 11,
+                   ),
+                   maxLines: 2,
+                   overflow: TextOverflow.ellipsis,
                  ),
-                 maxLines: 2,
-                 overflow: TextOverflow.ellipsis,
                ),
              ],
            ),

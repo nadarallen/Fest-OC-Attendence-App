@@ -16,6 +16,23 @@ class FirestoreService {
   final CollectionReference _attendanceRef =
       FirebaseFirestore.instance.collection('attendance');
 
+  // -- Users Collection --
+  final CollectionReference _usersRef =
+      FirebaseFirestore.instance.collection('users');
+
+  /// Seeds the 4 authorized users into Firestore
+  Future<void> seedAuthorizedUsers() async {
+    final users = [
+      {'username': 'Allen Admin', 'displayName': 'Allen Admin', 'totpSecret': 'JBSWY3DPEHPK3PXP'},
+      {'username': 'user1', 'displayName': 'user1', 'totpSecret': 'KVKFKRCPNZQUYMLS'},
+      {'username': 'user2', 'displayName': 'user2', 'totpSecret': 'MZXW6YTBOIJW4ZZP'},
+      {'username': 'user3', 'displayName': 'user3', 'totpSecret': 'NXW2CZLSMFUG64TW'},
+    ];
+    for (var u in users) {
+      await _usersRef.doc(u['username']!).set(u, SetOptions(merge: true));
+    }
+  }
+
   // Student Operations
   Future<void> createStudent(Student student) async {
     // Using rollNumber as Document ID for easy lookup

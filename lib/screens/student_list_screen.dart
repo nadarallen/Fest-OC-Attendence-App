@@ -152,10 +152,14 @@ class _StudentListItemState extends State<_StudentListItem> {
                     Text(
                       widget.student.name,
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       '${widget.student.rollNumber} | ${widget.student.ocDomain}',
                       style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

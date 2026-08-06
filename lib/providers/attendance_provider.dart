@@ -24,7 +24,7 @@ class AttendanceProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String> markAttendance(String rollNumber, ScanType type) async {
+  Future<String> markAttendance(String rollNumber, ScanType type, {String markedBy = 'System'}) async {
     final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
     
     // Check if student exists
@@ -40,6 +40,7 @@ class AttendanceProvider with ChangeNotifier {
           date: date,
           status: 'P',
           inTime: DateFormat('HH:mm').format(DateTime.now()),
+          markedBy: markedBy,
         );
         await FirestoreService.instance.markCheckIn(attendance);
         notifyListeners();
@@ -66,10 +67,10 @@ class AttendanceProvider with ChangeNotifier {
     }
   }
 
-  Future<void> registerStudent(Student student) async {
+  Future<void> registerStudent(Student student, {String markedBy = 'System'}) async {
     await FirestoreService.instance.createStudent(student);
     await loadStudents();
-    await markAttendance(student.rollNumber, ScanType.checkIn); 
+    await markAttendance(student.rollNumber, ScanType.checkIn, markedBy: markedBy); 
   }
 
   Future<Map<String, double>> getAttendancePercentage(String rollNumber) async {
