@@ -6,126 +6,433 @@ import 'scanner_screen.dart';
 import 'student_list_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+   const DashboardScreen({super.key});
 
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+   @override
+   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() => 
-      Provider.of<AttendanceProvider>(context, listen: false).loadStudents()
-    );
-  }
+   bool _isExporting = false;
 
-  void _exportCsv() async {
-    try {
-      final path = await CsvService().exportAttendanceToCsv();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('CSV Exported to: $path')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Export Failed: $e')),
-      );
-    }
-  }
+   @override
+   void initState() {
+     super.initState();
+     Future.microtask(() => 
+       Provider.of<AttendanceProvider>(context, listen: false).loadStudents()
+     );
+   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Unpaid Labours'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.download),
-            tooltip: 'Export CSV',
-            onPressed: _exportCsv,
-          )
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _DashboardCard(
-              icon: Icons.qr_code_scanner,
-              label: 'Scan Attendance',
-              color: Colors.blueAccent,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const ScannerScreen()),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-            _DashboardCard(
-              icon: Icons.list_alt,
-              label: 'View Register',
-              color: Colors.green,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const StudentListScreen()),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+   void _exportCsv() async {
+     setState(() {
+       _isExporting = true;
+     });
+     try {
+       final path = await CsvService().exportAttendanceToCsv();
+       if (!mounted) return;
+       ScaffoldMessenger.of(context).showSnackBar(
+         SnackBar(
+           content: Row(
+             children: [
+               const Icon(Icons.check_circle, color: Colors.white),
+               const SizedBox(width: 8),
+               Expanded(child: Text('CSV Shared successfully!')),
+             ],
+           ),
+           backgroundColor: Colors.green,
+           behavior: SnackBarBehavior.floating,
+           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+         ),
+       );
+     } catch (e) {
+       if (!mounted) return;
+       ScaffoldMessenger.of(context).showSnackBar(
+         SnackBar(
+           content: Row(
+             children: [
+               const Icon(Icons.error, color: Colors.white),
+               const SizedBox(width: 8),
+               Expanded(child: Text('Export Failed: $e')),
+             ],
+           ),
+           backgroundColor: Colors.redAccent,
+           behavior: SnackBarBehavior.floating,
+           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+         ),
+       );
+     } finally {
+       if (mounted) {
+         setState(() {
+           _isExporting = false;
+         });
+       }
+     }
+   }
+
+   Future<void> _confirmClearDatabase() async {
+     // First confirmation step
+     final firstConfirm = await showDialog<bool>(
+       context: context,
+       builder: (context) => AlertDialog(
+         title: const Row(
+           children: [
+             Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+             SizedBox(width: 8),
+             Text('Reset Database?'),
+           ],
+         ),
+         content: const Text(
+           'This will permanently delete all student and attendance records from the server. This action cannot be undone.\n\nAre you sure you want to proceed?',
+         ),
+         actions: [
+           TextButton(
+             onPressed: () => Navigator.pop(context, false),
+             child: const Text('Cancel'),
+           ),
+           ElevatedButton(
+             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+             onPressed: () => Navigator.pop(context, true),
+             child: const Text('Proceed', style: TextStyle(color: Colors.white)),
+           ),
+         ],
+       ),
+     );
+
+     if (firstConfirm != true || !mounted) return;
+
+     // Second confirmation step (text verification)
+     final textController = TextEditingController();
+     final secondConfirm = await showDialog<bool>(
+       context: context,
+       builder: (context) => AlertDialog(
+         title: const Text('Confirm Deletion'),
+         content: Column(
+           mainAxisSize: MainAxisSize.min,
+           crossAxisAlignment: CrossAxisAlignment.start,
+           children: [
+             const Text(
+               'To confirm, type "DELETE" in the box below to permanently erase the database:',
+               style: TextStyle(fontWeight: FontWeight.bold),
+             ),
+             const SizedBox(height: 12),
+             TextField(
+               controller: textController,
+               decoration: const InputDecoration(
+                 hintText: 'DELETE',
+                 border: OutlineInputBorder(),
+               ),
+               textCapitalization: TextCapitalization.characters,
+             ),
+           ],
+         ),
+         actions: [
+           TextButton(
+             onPressed: () => Navigator.pop(context, false),
+             child: const Text('Cancel'),
+           ),
+           ElevatedButton(
+             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+             onPressed: () {
+               if (textController.text.trim() == 'DELETE') {
+                 Navigator.pop(context, true);
+               } else {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text('Verification code mismatch!')),
+                 );
+               }
+             },
+             child: const Text('Permanently Erase', style: TextStyle(color: Colors.white)),
+           ),
+         ],
+       ),
+     );
+
+     if (secondConfirm == true && mounted) {
+       showDialog(
+         context: context,
+         barrierDismissible: false,
+         builder: (context) => const Center(
+           child: Card(
+             child: Padding(
+               padding: EdgeInsets.all(24.0),
+               child: Column(
+                 mainAxisSize: MainAxisSize.min,
+                 children: [
+                   CircularProgressIndicator(),
+                   SizedBox(height: 16),
+                   Text('Resetting database, please wait...'),
+                 ],
+               ),
+             ),
+           ),
+         ),
+       );
+
+       try {
+         await Provider.of<AttendanceProvider>(context, listen: false).clearAllData();
+         if (!mounted) return;
+         Navigator.pop(context); // Close loading dialog
+         ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(
+             content: Text('Database reset completed!'),
+             backgroundColor: Colors.green,
+           ),
+         );
+       } catch (e) {
+         if (!mounted) return;
+         Navigator.pop(context); // Close loading dialog
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(
+             content: Text('Failed to clear database: $e'),
+             backgroundColor: Colors.redAccent,
+           ),
+         );
+       }
+     }
+   }
+
+   @override
+   Widget build(BuildContext context) {
+     final theme = Theme.of(context);
+     return Scaffold(
+       body: CustomScrollView(
+         slivers: [
+           // Premium Gradient Header
+           SliverAppBar(
+             expandedHeight: 180.0,
+             floating: false,
+             pinned: true,
+             flexibleSpace: FlexibleSpaceBar(
+               title: const Text(
+                 'Unpaid Labours',
+                 style: TextStyle(
+                   color: Colors.white,
+                   fontWeight: FontWeight.bold,
+                   shadows: [
+                     Shadow(
+                       offset: Offset(0, 1),
+                       blurRadius: 3.0,
+                       color: Colors.black26,
+                     ),
+                   ],
+                 ),
+               ),
+               background: Container(
+                 decoration: BoxDecoration(
+                   gradient: LinearGradient(
+                     begin: Alignment.topLeft,
+                     end: Alignment.bottomRight,
+                     colors: [
+                       theme.colorScheme.primary,
+                       theme.colorScheme.primary.withRed(100),
+                     ],
+                   ),
+                 ),
+                 child: Stack(
+                   children: [
+                     Positioned(
+                       right: -30,
+                       top: -30,
+                       child: CircleAvatar(
+                         radius: 80,
+                         backgroundColor: Colors.white.withOpacity(0.08),
+                       ),
+                     ),
+                     Positioned(
+                       left: -20,
+                       bottom: -20,
+                       child: CircleAvatar(
+                         radius: 60,
+                         backgroundColor: Colors.white.withOpacity(0.05),
+                       ),
+                     ),
+                   ],
+                 ),
+               ),
+             ),
+           ),
+
+           // Stats & Navigation Grid
+           SliverToBoxAdapter(
+             child: Padding(
+               padding: const EdgeInsets.all(16.0),
+               child: Column(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+                   // Welcome Text
+                   Text(
+                     'Overview',
+                     style: theme.textTheme.titleLarge?.copyWith(
+                       fontWeight: FontWeight.bold,
+                       color: const Color(0xFF1E293B),
+                     ),
+                   ),
+                   const SizedBox(height: 12),
+
+                   // Stat Card
+                   Consumer<AttendanceProvider>(
+                     builder: (context, provider, child) {
+                       return Card(
+                         color: Colors.white,
+                         surfaceTintColor: Colors.white,
+                         child: Padding(
+                           padding: const EdgeInsets.all(20.0),
+                           child: Row(
+                             children: [
+                               CircleAvatar(
+                                 radius: 28,
+                                 backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                                 child: Icon(
+                                   Icons.people_alt_rounded,
+                                   color: theme.colorScheme.primary,
+                                   size: 28,
+                                 ),
+                               ),
+                               const SizedBox(width: 16),
+                               Column(
+                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                 children: [
+                                   Text(
+                                     'Total Registered',
+                                     style: theme.textTheme.bodyMedium?.copyWith(
+                                       color: Colors.grey[600],
+                                     ),
+                                   ),
+                                   Text(
+                                     provider.isLoading
+                                         ? '...'
+                                         : '${provider.students.length} Students',
+                                     style: theme.textTheme.headlineSmall?.copyWith(
+                                       fontWeight: FontWeight.bold,
+                                       color: theme.colorScheme.primary,
+                                     ),
+                                   ),
+                                 ],
+                               ),
+                             ],
+                           ),
+                         ),
+                       );
+                     },
+                   ),
+                   const SizedBox(height: 16),
+
+                   Text(
+                     'Quick Actions',
+                     style: theme.textTheme.titleMedium?.copyWith(
+                       fontWeight: FontWeight.bold,
+                       color: const Color(0xFF1E293B),
+                     ),
+                   ),
+                   const SizedBox(height: 12),
+
+                   // Menu buttons
+                   GridView.count(
+                     crossAxisCount: 2,
+                     shrinkWrap: true,
+                     physics: const NeverScrollableScrollPhysics(),
+                     crossAxisSpacing: 16,
+                     mainAxisSpacing: 16,
+                     childAspectRatio: 1.1,
+                     children: [
+                       _DashboardActionCard(
+                         icon: Icons.qr_code_scanner_rounded,
+                         label: 'Scan Attendance',
+                         description: 'Check-In/Out students',
+                         color: theme.colorScheme.primary,
+                         onTap: () {
+                           Navigator.of(context).push(
+                             MaterialPageRoute(builder: (context) => const ScannerScreen()),
+                           );
+                         },
+                       ),
+                       _DashboardActionCard(
+                         icon: Icons.assignment_rounded,
+                         label: 'View Register',
+                         description: 'Profiles & Stats',
+                         color: const Color(0xFF10B981),
+                         onTap: () {
+                           Navigator.of(context).push(
+                             MaterialPageRoute(builder: (context) => const StudentListScreen()),
+                           );
+                         },
+                       ),
+                       _DashboardActionCard(
+                         icon: _isExporting
+                             ? Icons.hourglass_top_rounded
+                             : Icons.cloud_download_rounded,
+                         label: _isExporting ? 'Exporting...' : 'Export CSV',
+                         description: 'Share attendance report',
+                         color: Colors.amber[800]!,
+                         onTap: _isExporting ? () {} : _exportCsv,
+                       ),
+                     ],
+                   ),
+                 ],
+               ),
+             ),
+           ),
+         ],
+       ),
+     );
+   }
 }
 
-class _DashboardCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
+class _DashboardActionCard extends StatelessWidget {
+   final IconData icon;
+   final String label;
+   final String description;
+   final Color color;
+   final VoidCallback onTap;
 
-  const _DashboardCard({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
+   const _DashboardActionCard({
+     required this.icon,
+     required this.label,
+     required this.description,
+     required this.color,
+     required this.onTap,
+   });
 
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: color.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          width: 200,
-          height: 150,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withOpacity(0.3)),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 60, color: color),
-              const SizedBox(height: 10),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+   @override
+   Widget build(BuildContext context) {
+     final theme = Theme.of(context);
+     return Card(
+       elevation: 3,
+       color: Colors.white,
+       surfaceTintColor: Colors.white,
+       child: InkWell(
+         onTap: onTap,
+         borderRadius: BorderRadius.circular(20),
+         child: Padding(
+           padding: const EdgeInsets.all(16.0),
+           child: Column(
+             crossAxisAlignment: CrossAxisAlignment.start,
+             mainAxisAlignment: MainAxisAlignment.center,
+             children: [
+               Icon(icon, size: 36, color: color),
+               const SizedBox(height: 12),
+               Text(
+                 label,
+                 style: theme.textTheme.titleMedium?.copyWith(
+                   fontWeight: FontWeight.bold,
+                   color: const Color(0xFF1E293B),
+                 ),
+                 maxLines: 1,
+                 overflow: TextOverflow.ellipsis,
+               ),
+               const SizedBox(height: 4),
+               Text(
+                 description,
+                 style: theme.textTheme.bodySmall?.copyWith(
+                   color: Colors.grey[500],
+                 ),
+                 maxLines: 2,
+                 overflow: TextOverflow.ellipsis,
+               ),
+             ],
+           ),
+         ),
+       ),
+     );
+   }
 }

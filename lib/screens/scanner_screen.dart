@@ -77,7 +77,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
   Future<void> _showRegisterDialog(String rollNumber) async {
     final nameController = TextEditingController();
-    final deptController = TextEditingController();
+    final domainController = TextEditingController();
     final semController = TextEditingController();
 
     await showDialog(
@@ -89,7 +89,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Name')),
-            TextField(controller: deptController, decoration: const InputDecoration(labelText: 'Department')),
+            TextField(controller: domainController, decoration: const InputDecoration(labelText: 'OC Domain')),
             TextField(controller: semController, decoration: const InputDecoration(labelText: 'Semester')),
           ],
         ),
@@ -105,7 +105,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                final newStudent = Student(
                  rollNumber: rollNumber,
                  name: nameController.text,
-                 department: deptController.text,
+                 ocDomain: domainController.text,
                  semester: semController.text,
                );
                
@@ -119,6 +119,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
       ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {

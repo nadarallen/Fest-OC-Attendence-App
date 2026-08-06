@@ -32,7 +32,7 @@ class DatabaseHelper {
       CREATE TABLE students (
         roll_number TEXT PRIMARY KEY,
         name TEXT NOT NULL,
-        department TEXT NOT NULL,
+        oc_domain TEXT NOT NULL,
         semester TEXT NOT NULL
       )
     ''');
@@ -84,7 +84,7 @@ class DatabaseHelper {
     final db = await instance.database;
     final maps = await db.query(
       'students',
-      columns: ['roll_number', 'name', 'department', 'semester'],
+      columns: ['roll_number', 'name', 'oc_domain', 'semester'],
       where: 'roll_number = ?',
       whereArgs: [rollNumber],
     );

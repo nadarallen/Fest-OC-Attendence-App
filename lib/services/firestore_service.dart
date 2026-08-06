@@ -95,4 +95,19 @@ class FirestoreService {
       'present': presentSnapshot.count ?? 0,
     };
   }
+
+  // Clear Database
+  Future<void> clearDatabase() async {
+    // Delete all students
+    final studentsSnapshot = await _studentsRef.get();
+    for (var doc in studentsSnapshot.docs) {
+      await doc.reference.delete();
+    }
+
+    // Delete all attendance records
+    final attendanceSnapshot = await _attendanceRef.get();
+    for (var doc in attendanceSnapshot.docs) {
+      await doc.reference.delete();
+    }
+  }
 }

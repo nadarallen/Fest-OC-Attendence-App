@@ -1,13 +1,13 @@
 class Student {
   final String rollNumber;
   final String name;
-  final String department;
+  final String ocDomain;
   final String semester;
   
   Student({
     required this.rollNumber,
     required this.name,
-    required this.department,
+    required this.ocDomain,
     required this.semester,
   });
 
@@ -15,7 +15,7 @@ class Student {
     return {
       'roll_number': rollNumber,
       'name': name,
-      'department': department,
+      'oc_domain': ocDomain,
       'semester': semester,
     };
   }
@@ -24,8 +24,9 @@ class Student {
     return Student(
       rollNumber: map['roll_number'],
       name: map['name'],
-      department: map['department'],
+      ocDomain: map['oc_domain'] ?? map['department'] ?? '',
       semester: map['semester'],
     );
   }
 }
+

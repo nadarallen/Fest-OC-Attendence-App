@@ -154,7 +154,7 @@ class _StudentListItemState extends State<_StudentListItem> {
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     Text(
-                      '${widget.student.rollNumber} | ${widget.student.department}',
+                      '${widget.student.rollNumber} | ${widget.student.ocDomain}',
                       style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
                   ],

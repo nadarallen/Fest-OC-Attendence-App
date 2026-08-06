@@ -85,4 +85,17 @@ class AttendanceProvider with ChangeNotifier {
       'total': total.toDouble()
     };
   }
+
+  Future<void> clearAllData() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await FirestoreService.instance.clearDatabase();
+      _students = [];
+    } catch (e) {
+      debugPrint("Error clearing database: $e");
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
 }
