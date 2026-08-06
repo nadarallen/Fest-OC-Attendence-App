@@ -13,7 +13,6 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
   final _totpController = TextEditingController();
 
   final List<UserAccount> _users = UserAccount.defaultUsers;
@@ -23,7 +22,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _usernameController.text = _selectedUsername;
     _seedUsersToDb();
 
     // Check if session was auto-expired
@@ -61,7 +59,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
     _totpController.dispose();
     super.dispose();
   }
@@ -73,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _isSubmitting = true;
     });
 
-    final username = _usernameController.text.trim();
+    final username = _selectedUsername;
     final totpCode = _totpController.text.trim();
 
     try {
@@ -181,14 +178,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 20),
 
-                              // Quick Username Selector Dropdown for 4 Authorized Users
+                              // Username Selector Dropdown for 4 Authorized Users
                               DropdownButtonFormField<String>(
                                 initialValue: _users.any((u) => u.username == _selectedUsername)
                                     ? _selectedUsername
                                     : _users.first.username,
                                 isExpanded: true,
                                 decoration: InputDecoration(
-                                  labelText: 'Authorized User',
+                                  labelText: 'Select Authorized User',
                                   prefixIcon: const Icon(Icons.person_outline_rounded),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -198,7 +195,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   return DropdownMenuItem<String>(
                                     value: u.username,
                                     child: Text(
-                                      '${u.displayName} (${u.username})',
+                                      u.displayName,
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   );
@@ -207,31 +205,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                   if (val != null) {
                                     setState(() {
                                       _selectedUsername = val;
-                                      _usernameController.text = val;
                                     });
                                   }
                                 },
                               ),
-                              const SizedBox(height: 16),
-
-                              // Username Input Field
-                              TextFormField(
-                                controller: _usernameController,
-                                decoration: InputDecoration(
-                                  labelText: 'Username',
-                                  prefixIcon: const Icon(Icons.badge_outlined),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                validator: (val) {
-                                  if (val == null || val.trim().isEmpty) {
-                                    return 'Please enter your username';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 20),
 
                               // Password / 6-Digit Google Authenticator Code
                               TextFormField(
